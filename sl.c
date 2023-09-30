@@ -40,6 +40,7 @@
 
 #include <curses.h>
 #include <signal.h>
+#include <time.h>
 #include <unistd.h>
 #include "sl.h"
 
@@ -55,13 +56,19 @@ int ACCIDENT  = 0;
 int LOGO      = 0;
 int FLY       = 0;
 int C51       = 0;
+int GAY       = 0;
+
+int step = 0;
 
 int my_mvaddstr(int y, int x, char *str)
 {
     for ( ; x < 0; ++x, ++str)
         if (*str == '\0')  return ERR;
-    for ( ; *str != '\0'; ++str, ++x)
+    for ( ; *str != '\0'; ++str, ++x) {
+        if(GAY)
+            attron(COLOR_PAIR((x + y + step * 2 / 3) % 6 + 1));
         if (mvaddch(y, x, *str) == ERR)  return ERR;
+    }
     return OK;
 }
 
@@ -78,6 +85,15 @@ void option(char *str)
             default:                break;
         }
     }
+}
+
+int is_friday()
+{
+    time_t rawtime;
+    struct tm *timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    return timeinfo->tm_wday == 5;
 }
 
 int main(int argc, char *argv[])
@@ -97,6 +113,17 @@ int main(int argc, char *argv[])
     leaveok(stdscr, TRUE);
     scrollok(stdscr, FALSE);
 
+    GAY = is_friday();
+    if(GAY) {
+        start_color();
+        init_pair(1, COLOR_RED, 0);
+        init_pair(2, COLOR_YELLOW, 0);
+        init_pair(3, COLOR_GREEN, 0);
+        init_pair(4, COLOR_CYAN, 0);
+        init_pair(5, COLOR_BLUE, 0);
+        init_pair(6, COLOR_MAGENTA, 0);
+    }
+
     for (x = COLS - 1; ; --x) {
         if (LOGO == 1) {
             if (add_sl(x) == ERR) break;
@@ -109,6 +136,7 @@ int main(int argc, char *argv[])
         }
         getch();
         refresh();
+        step++;
         usleep(40000);
     }
     mvcur(0, COLS - 1, LINES - 1, 0);
